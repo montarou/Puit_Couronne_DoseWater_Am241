@@ -286,38 +286,6 @@ void EventAction::EndOfEventAction(const G4Event* event)
         GetNumberAbsorbed()
     );
     
-    // ─────────────────────────────────────────────────────────────
-    // REMPLISSAGE DU NTUPLE EventData (Ntuple 0)
-    // ─────────────────────────────────────────────────────────────
-    {
-        // Convertir les dépôts en keV pour le ntuple
-        std::array<G4double, DetectorConstruction::kNbWaterRings> ringEdep_keV;
-        for (G4int i = 0; i < DetectorConstruction::kNbWaterRings; ++i) {
-            ringEdep_keV[i] = fRingEnergyDeposit[i] / keV;
-        }
-        
-        fRunAction->FillEventDataNtuple(
-            eventID,
-            totalDeposit / keV,
-            ringEdep_keV,
-            fPrimaryGammas.size(),
-            fGammasEnteredWater.size()
-        );
-    }
-    
-    // ─────────────────────────────────────────────────────────────
-    // REMPLISSAGE DU NTUPLE GammaData (Ntuple 2) - 1 entrée par gamma
-    // ─────────────────────────────────────────────────────────────
-    for (const auto& gamma : fPrimaryGammas) {
-        fRunAction->FillGammaDataNtuple(
-            eventID,
-            gamma.energyInitial / keV,
-            gamma.gammaLineIndex,
-            gamma.enteredWater,
-            gamma.absorbedInWater
-        );
-    }
-    
     // Debug pour les premiers événements
     if (fVerboseLevel > 0 && eventID < 10) {
         std::stringstream ss;
@@ -370,14 +338,6 @@ void EventAction::RecordContainerEntry(G4int trackID)
 {
     // Ajouter au set pour éviter le double-comptage
     fGammasEnteredContainer.insert(trackID);
-    
-    // CORRECTION: Marquer aussi comme "entré dans l'eau" car Water1 EST de l'eau
-    // Cela résout l'incohérence où des gammas absorbés dans Water1 n'étaient
-    // pas comptés comme "entrés dans l'eau" (seulement WaterRing comptait)
-    auto it = fTrackIDtoIndex.find(trackID);
-    if (it != fTrackIDtoIndex.end()) {
-        fPrimaryGammas[it->second].enteredWater = true;
-    }
 }
 
 G4bool EventAction::HasEnteredContainer(G4int trackID) const
@@ -395,15 +355,6 @@ void EventAction::RecordGammaAbsorbed(G4int trackID, const G4String& volumeName,
         
         if (volumeName.find("Water") != std::string::npos) {
             fPrimaryGammas[it->second].absorbedInWater = true;
-            
-            // ═══════════════════════════════════════════════════════════════
-            // CORRECTION BUG: Si absorbé dans l'eau, alors forcément entré!
-            // Cela corrige l'incohérence où des gammas absorbés dans Water1
-            // n'étaient pas comptés comme "entrés" car RecordContainerEntry
-            // n'avait pas été appelé (timing ou condition manquée).
-            // Logique: on ne peut PAS être absorbé sans être entré!
-            // ═══════════════════════════════════════════════════════════════
-            fPrimaryGammas[it->second].enteredWater = true;
         }
     }
 }

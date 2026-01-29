@@ -1,0 +1,359 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{siunitx}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+
+\geometry{margin=2.5cm}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Simulation Geant4}
+\fancyhead[R]{Comparaison Am-241 / Eu-152}
+\fancyfoot[C]{\thepage}
+
+\definecolor{headerblue}{RGB}{41, 128, 185}
+\definecolor{alertred}{RGB}{192, 57, 43}
+\definecolor{successgreen}{RGB}{39, 174, 96}
+\definecolor{warningorange}{RGB}{230, 126, 34}
+\definecolor{lightgray}{RGB}{245, 245, 245}
+
+\titleformat{\section}{\Large\bfseries\color{headerblue}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
+
+\tcbuselibrary{skins,breakable}
+
+\newtcolorbox{keypoint}[1][]{
+    colback=headerblue!10,
+    colframe=headerblue,
+    fonttitle=\bfseries,
+    title=#1,
+    breakable
+}
+
+\newtcolorbox{warning}[1][]{
+    colback=warningorange!10,
+    colframe=warningorange,
+    fonttitle=\bfseries,
+    title=#1,
+    breakable
+}
+
+\newtcolorbox{conclusion}[1][]{
+    colback=successgreen!10,
+    colframe=successgreen,
+    fonttitle=\bfseries,
+    title=#1,
+    breakable
+}
+
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+
+\begin{document}
+
+\begin{center}
+    {\LARGE\bfseries Analyse comparative des dépôts de dose}\\[0.4cm]
+    {\Large Sources Am-241 et Eu-152 dans l'eau}\\[0.5cm]
+    {\large Simulation Monte Carlo Geant4}\\[0.3cm]
+    {\large 19 janvier 2026}
+\end{center}
+
+\vspace{0.5cm}
+
+\tableofcontents
+
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Contexte et problématique}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Configuration géométrique}
+
+La simulation modélise le dépôt de dose dans un volume d'eau de 3~mm d'épaisseur, divisé en deux zones :
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+\rowcolor{headerblue!20}
+\textbf{Volume} & \textbf{Position (z)} & \textbf{Épaisseur} & \textbf{Comptabilisation} \\
+\midrule
+Water1 & 100--102 mm & 2 mm & \textcolor{alertred}{\textbf{Non comptée}} \\
+\rowcolor{lightgray}
+WaterRings (anneaux) & 102--103 mm & 1 mm & \textcolor{successgreen}{\textbf{Comptée}} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{warning}[Limitation actuelle]
+La simulation ne comptabilise l'énergie déposée que dans les anneaux (1~mm), ignorant les 2~mm de Water1 situés en amont. Cette limitation sous-estime significativement le dépôt de dose pour les sources de basse énergie.
+\end{warning}
+
+\subsection{Observation initiale}
+
+Pour une même activité de 42~kBq, les débits de dose mesurés dans l'anneau central (1~mm) sont étonnamment proches :
+
+\begin{center}
+\begin{tabular}{lccl}
+\toprule
+\rowcolor{headerblue!20}
+\textbf{Source} & \textbf{Spectre principal} & \textbf{Débit (anneau 0)} & \textbf{Observation} \\
+\midrule
+Am-241 & 13--60 keV & $\sim 7{,}0~\mu$Gy/h & \multirow{2}{*}{Quasi-identiques !} \\
+\rowcolor{lightgray}
+Eu-152 & 122--1408 keV & $6{,}35~\mu$Gy/h & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Question :} Pourquoi des sources aux spectres si différents donnent-elles des doses similaires ?
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Analyse physique de la compensation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Facteurs influençant le dépôt de dose}
+
+Le débit de dose dépend de plusieurs facteurs qui se compensent partiellement :
+
+\begin{equation}
+\dot{D} \propto A \times \bar{n}_\gamma \times \bar{E}_\gamma \times P_{\text{int}} \times f_{\text{dep}}
+\end{equation}
+
+où :
+\begin{itemize}[noitemsep]
+    \item $A$ : activité de la source (Bq)
+    \item $\bar{n}_\gamma$ : nombre moyen de photons par désintégration
+    \item $\bar{E}_\gamma$ : énergie moyenne des photons (keV)
+    \item $P_{\text{int}}$ : probabilité d'interaction dans le volume
+    \item $f_{\text{dep}}$ : fraction d'énergie effectivement déposée par interaction
+\end{itemize}
+
+\subsection{Comparaison des facteurs}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lccC{2cm}}
+\toprule
+\rowcolor{headerblue!20}
+\textbf{Facteur} & \textbf{Am-241} & \textbf{Eu-152} & \textbf{Ratio Am/Eu} \\
+\midrule
+Photons/désintégration ($\bar{n}_\gamma$) & 0,76 & $\sim 2{,}2$ & 0,35 \\
+\rowcolor{lightgray}
+Énergie moyenne ($\bar{E}_\gamma$) & $\sim 40$ keV & $\sim 400$ keV & 0,10 \\
+Taux d'interaction ($P_{\text{int}}$) & $\sim 15\%$ & $\sim 2{,}5\%$ & 6,0 \\
+\rowcolor{lightgray}
+Fraction déposée ($f_{\text{dep}}$) & 100\% & $\sim 40\%$ & 2,5 \\
+\midrule
+\textbf{Produit global} & \textbf{1,0} & \textbf{$\sim 0{,}9$} & $\sim 1{,}1$ \\
+\bottomrule
+\end{tabular}
+\caption{Facteurs de compensation entre Am-241 et Eu-152}
+\end{table}
+
+\subsection{Mécanismes d'interaction}
+
+\begin{keypoint}[Effet photoélectrique (Am-241)]
+\begin{itemize}[noitemsep]
+    \item Dominant pour $E_\gamma < 100$~keV dans l'eau
+    \item Section efficace $\sigma_{\text{pe}} \propto Z^5 / E^{3,5}$
+    \item \textbf{100\% de l'énergie} du photon est transférée aux électrons
+    \item Forte atténuation : $\mu \approx 1{-}3$~cm$^{-1}$ pour 15--60 keV
+\end{itemize}
+\end{keypoint}
+
+\begin{keypoint}[Diffusion Compton (Eu-152)]
+\begin{itemize}[noitemsep]
+    \item Dominant pour $100~\text{keV} < E_\gamma < 5$~MeV
+    \item Section efficace quasi-indépendante de $Z$
+    \item \textbf{30--70\% de l'énergie} transférée (selon angle de diffusion)
+    \item Faible atténuation : $\mu \approx 0{,}1{-}0{,}2$~cm$^{-1}$ pour 300--1000 keV
+\end{itemize}
+\end{keypoint}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Impact de l'épaisseur considérée}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Loi d'atténuation}
+
+L'intensité transmise suit la loi de Beer-Lambert :
+\begin{equation}
+I(x) = I_0 \, e^{-\mu x}
+\end{equation}
+
+La fraction d'énergie absorbée entre 0 et $x$ est :
+\begin{equation}
+F(x) = 1 - e^{-\mu x}
+\end{equation}
+
+\subsection{Répartition de l'absorption selon l'énergie}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ccccc}
+\toprule
+\rowcolor{headerblue!20}
+\textbf{Énergie (keV)} & \textbf{$\mu$ (cm$^{-1}$)} & \textbf{Abs. 2 mm (\%)} & \textbf{Abs. 3 mm (\%)} & \textbf{Ratio 2mm/3mm} \\
+\midrule
+13,9 (X$_\text{L}\alpha$) & 2,5 & 39,3 & 52,8 & 0,74 \\
+\rowcolor{lightgray}
+17,0 (X$_\text{L}\beta$) & 1,5 & 25,9 & 36,2 & 0,72 \\
+20,8 (X$_\text{L}\gamma$) & 0,9 & 16,5 & 23,7 & 0,70 \\
+\rowcolor{lightgray}
+59,5 ($\gamma$ principal) & 0,2 & 3,9 & 5,8 & 0,67 \\
+\midrule
+344 (Eu-152) & 0,11 & 2,2 & 3,2 & 0,67 \\
+\bottomrule
+\end{tabular}
+\caption{Répartition de l'absorption dans Water1 (2 mm) et total (3 mm)}
+\end{table}
+
+\begin{warning}[Conséquence pour Am-241]
+Pour les raies X de l'Am-241 (13--20 keV), \textbf{65 à 75\% de l'absorption totale} se produit dans les 2 premiers millimètres (Water1), qui ne sont pas comptabilisés dans la simulation actuelle !
+\end{warning}
+
+\subsection{Estimation du dépôt réel sur 3 mm}
+
+En considérant que les anneaux (1 mm) ne représentent qu'environ 33\% de l'absorption totale pour l'Am-241 :
+
+\begin{equation}
+E_{\text{total}}^{\text{(3 mm)}} \approx \frac{E_{\text{anneaux}}^{\text{(1 mm)}}}{0{,}33} \approx 3 \times E_{\text{anneaux}}
+\end{equation}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lccc}
+\toprule
+\rowcolor{headerblue!20}
+\textbf{Source} & \textbf{Débit 1 mm} & \textbf{Débit 3 mm (estimé)} & \textbf{Facteur} \\
+\midrule
+Am-241 & $7{,}0~\mu$Gy/h & $\mathbf{\sim 20~\mu}$\textbf{Gy/h} & $\times 2{,}9$ \\
+\rowcolor{lightgray}
+Eu-152 & $6{,}35~\mu$Gy/h & $\sim 7{-}8~\mu$Gy/h & $\times 1{,}1{-}1{,}2$ \\
+\bottomrule
+\end{tabular}
+\caption{Comparaison des débits de dose selon l'épaisseur considérée}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Synthèse comparative}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Tableau récapitulatif}
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{lcc}
+\toprule
+\rowcolor{headerblue!20}
+\textbf{Paramètre} & \textbf{Am-241} & \textbf{Eu-152} \\
+\midrule
+Activité & \multicolumn{2}{c}{42 kBq} \\
+\rowcolor{lightgray}
+Spectre principal & 13--60 keV & 122--1408 keV \\
+Interaction dominante & Photoélectrique & Compton \\
+\rowcolor{lightgray}
+$\mu$ moyen (cm$^{-1}$) & $\sim 1{-}2$ & $\sim 0{,}1$ \\
+\midrule
+\multicolumn{3}{c}{\cellcolor{headerblue!10}\textbf{Débits de dose}} \\
+\midrule
+Anneau central (1 mm) & $7{,}0~\mu$Gy/h & $6{,}35~\mu$Gy/h \\
+\rowcolor{lightgray}
+Région centrale (3 mm) & $\mathbf{\sim 20~\mu}$\textbf{Gy/h} & $\sim 7{-}8~\mu$Gy/h \\
+\textbf{Ratio Am-241 / Eu-152} & \multicolumn{2}{c}{\textbf{$\sim 2{,}7$}} \\
+\midrule
+\multicolumn{3}{c}{\cellcolor{headerblue!10}\textbf{Temps pour 20 cGy (région centrale)}} \\
+\midrule
+Calcul & $\dfrac{200\,000~\mu\text{Gy}}{20~\mu\text{Gy/h}}$ & $\dfrac{200\,000~\mu\text{Gy}}{7{,}5~\mu\text{Gy/h}}$ \\[0.3cm]
+\rowcolor{lightgray}
+Résultat & $\mathbf{\sim 417}$ \textbf{jours} & $\sim 1\,111$ jours \\
+& $\approx$ \textbf{1,1 an} & $\approx$ 3 ans \\
+\bottomrule
+\end{tabular}
+\caption{Synthèse comparative Am-241 vs Eu-152}
+\end{table}
+
+\subsection{Explication de la compensation apparente (1 mm)}
+
+Sur le dernier millimètre uniquement, les débits sont proches car :
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{rcl}
+\textbf{Am-241} & : & $\underbrace{\text{Moins de } \gamma}_{\times 0{,}35} \times \underbrace{\text{Forte absorption}}_{\times 6} \times \underbrace{100\%~E~\text{déposée}}_{\times 2{,}5} \times \underbrace{E~\text{faible}}_{\times 0{,}1}$ \\[0.2cm]
+& & Produit $\approx 0{,}35 \times 6 \times 2{,}5 \times 0{,}1 \approx 0{,}5$ \\[0.3cm]
+\textbf{Eu-152} & : & $\underbrace{\text{Plus de } \gamma}_{\times 1} \times \underbrace{\text{Faible interact.}}_{\times 1} \times \underbrace{40\%~E~\text{déposée}}_{\times 1} \times \underbrace{E~\text{élevée}}_{\times 1}$ \\[0.2cm]
+& & Produit $\approx 1 \times 1 \times 1 \times 1 = 1$ \\
+\end{tabular}
+\end{center}
+
+Le ratio $\sim 0{,}5$ pour Am-241 est compensé par le fait que la majorité de l'absorption s'est déjà produite en amont (Water1), ne laissant qu'une fraction résiduelle dans les anneaux.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{conclusion}[Résultats principaux]
+\begin{enumerate}
+    \item \textbf{La proximité des débits sur 1 mm est un artefact} de la géométrie de mesure, non représentatif du dépôt total.
+    
+    \item \textbf{Sur l'épaisseur complète de 3 mm}, l'Am-241 dépose \textbf{2,5 à 3 fois plus de dose} que l'Eu-152, conformément à l'intuition physique.
+    
+    \item \textbf{Le temps pour atteindre 20 cGy} dans la région centrale est :
+    \begin{itemize}
+        \item Am-241 : $\sim 1{,}1$ an (contre 3,3 ans si on ne compte que 1 mm)
+        \item Eu-152 : $\sim 3$ ans
+    \end{itemize}
+    
+    \item \textbf{Recommandation} : Modifier la simulation pour comptabiliser l'énergie déposée dans Water1, ou fusionner Water1 et les anneaux en un volume unique de 3 mm.
+\end{enumerate}
+\end{conclusion}
+
+\vspace{0.5cm}
+
+\begin{keypoint}[Cohérence physique validée]
+Les résultats sont cohérents avec la physique des interactions photon-matière :
+\begin{itemize}
+    \item Fort pouvoir d'arrêt des photons de basse énergie (photoélectrique)
+    \item Absorption concentrée dans les premiers millimètres pour l'Am-241
+    \item Absorption quasi-uniforme pour l'Eu-152 (Compton)
+\end{itemize}
+\end{keypoint}
+
+\vspace{1cm}
+
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline
+\rowcolor{headerblue!30}
+& \textbf{Am-241} & \textbf{Eu-152} \\
+\hline
+\textbf{Débit dose (3 mm)} & $\sim 20~\mu$Gy/h & $\sim 7{,}5~\mu$Gy/h \\
+\hline
+\textbf{Temps pour 20 cGy} & \cellcolor{successgreen!30}\textbf{1,1 an} & 3 ans \\
+\hline
+\end{tabular}
+\end{center}
+
+\vspace{0.5cm}
+
+\begin{flushright}
+\textit{Document généré le 19 janvier 2026}
+\end{flushright}
+
+\end{document}

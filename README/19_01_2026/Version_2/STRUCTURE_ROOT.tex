@@ -1,0 +1,518 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{amsmath}
+\usepackage{siunitx}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{listings}
+\usepackage{tabularx}
+
+\geometry{margin=2cm}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Simulation Geant4 Am-241}
+\fancyhead[R]{Structure du fichier ROOT}
+\fancyfoot[C]{\thepage}
+
+\definecolor{headerblue}{RGB}{41, 128, 185}
+\definecolor{lightgray}{RGB}{245, 245, 245}
+\definecolor{codegray}{RGB}{240, 240, 240}
+
+\titleformat{\section}{\Large\bfseries\color{headerblue}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{codegray},
+    frame=single,
+    breaklines=true
+}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+
+\begin{document}
+
+\begin{center}
+    {\LARGE\bfseries Structure du fichier ROOT}\\[0.3cm]
+    {\Large Simulation Monte Carlo Geant4 --- Source Am-241}\\[0.5cm]
+    {\large Fichier: \texttt{output.root}}\\[0.3cm]
+    {\large 19 janvier 2026}
+\end{center}
+
+\vspace{0.5cm}
+
+\tableofcontents
+
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Histogrammes 1D}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Vue d'ensemble}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{clllr}
+\toprule
+\rowcolor{headerblue!20}
+\textbf{Index} & \textbf{Nom} & \textbf{Description} & \textbf{Range} & \textbf{Bins} \\
+\midrule
+H1[0] & hGammaEmitted & Spectre $\gamma$ émis & 0--2000 keV & 1000 \\
+\rowcolor{lightgray}
+H1[1] & hGammaEnteringWater & Spectre $\gamma$ entrant eau & 0--2000 keV & 1000 \\
+H1[2] & hEdepWater & Dépôt énergie eau (step) & 0--250 keV & 500 \\
+\rowcolor{lightgray}
+H1[3] & hEdepRing0 & Dépôt énergie anneau 0 & 0--200 keV & 200 \\
+H1[4] & hEdepRing1 & Dépôt énergie anneau 1 & 0--200 keV & 200 \\
+\rowcolor{lightgray}
+H1[5] & hEdepRing2 & Dépôt énergie anneau 2 & 0--200 keV & 200 \\
+H1[6] & hEdepRing3 & Dépôt énergie anneau 3 & 0--200 keV & 200 \\
+\rowcolor{lightgray}
+H1[7] & hEdepRing4 & Dépôt énergie anneau 4 & 0--200 keV & 200 \\
+H1[8] & hRadialDose & Profil radial dose & 0--25 mm & 25 \\
+\rowcolor{lightgray}
+H1[9] & hElectronSpectrum & Spectre $e^-$ secondaires & 0--1500 keV & 500 \\
+H1[10] & h\_dose\_ring0 & Dose/evt anneau 0 & variable & var. \\
+\rowcolor{lightgray}
+H1[11] & h\_dose\_ring1 & Dose/evt anneau 1 & variable & var. \\
+H1[12] & h\_dose\_ring2 & Dose/evt anneau 2 & variable & var. \\
+\rowcolor{lightgray}
+H1[13] & h\_dose\_ring3 & Dose/evt anneau 3 & variable & var. \\
+H1[14] & h\_dose\_ring4 & Dose/evt anneau 4 & variable & var. \\
+\rowcolor{lightgray}
+H1[15] & h\_dose\_total & Dose totale/evt & 0--0.03 nGy & 500 \\
+\bottomrule
+\end{tabular}
+\caption{Liste des histogrammes 1D}
+\end{table}
+
+\subsection{Conditions de remplissage détaillées}
+
+\subsubsection{H1[0] -- hGammaEmitted}
+\begin{itemize}
+    \item \textbf{Variable}: Énergie initiale du gamma (keV)
+    \item \textbf{Condition}: Premier step d'un gamma primaire (\texttt{parentID==0 \&\& stepNumber==1})
+    \item \textbf{Fichier source}: \texttt{SteppingAction.cc}, ligne $\sim$100
+    \item \textbf{Fonction}: \texttt{FillGammaEmittedSpectrum(energy/keV)}
+\end{itemize}
+
+\subsubsection{H1[1] -- hGammaEnteringWater}
+\begin{itemize}
+    \item \textbf{Variable}: Énergie du gamma entrant (keV)
+    \item \textbf{Condition}: Gamma primaire entrant dans \texttt{WaterRing\_*} pour la première fois
+    \item \textbf{Fichier source}: \texttt{SteppingAction.cc}, ligne $\sim$265
+    \item \textbf{Fonction}: \texttt{FillGammaEnteringWater(energy/keV)}
+    \item \textbf{Note}: Anti-double-comptage via \texttt{HasEnteredWater(trackID)}
+\end{itemize}
+
+\subsubsection{H1[2] -- hEdepWater}
+\begin{itemize}
+    \item \textbf{Variable}: Dépôt d'énergie par step (keV)
+    \item \textbf{Condition}: \texttt{edep > 0} dans un volume \texttt{WaterRing\_*}
+    \item \textbf{Fichier source}: \texttt{SteppingAction.cc}, ligne $\sim$169
+    \item \textbf{Fonction}: \texttt{FillEdepWater(edep/keV)}
+\end{itemize}
+
+\subsubsection{H1[3--7] -- hEdepRing0..4}
+\begin{itemize}
+    \item \textbf{Variable}: Dépôt d'énergie par step (keV)
+    \item \textbf{Condition}: \texttt{edep > 0} dans l'anneau $i$ correspondant
+    \item \textbf{Fichier source}: \texttt{SteppingAction.cc}, ligne $\sim$170
+    \item \textbf{Fonction}: \texttt{FillEdepRing(ringIndex, edep/keV)}
+\end{itemize}
+
+\subsubsection{H1[8] -- hRadialDose}
+\begin{itemize}
+    \item \textbf{Variable}: Position radiale (mm)
+    \item \textbf{Condition}: \textcolor{red}{\textbf{NON IMPLÉMENTÉ}} -- histogramme créé mais jamais rempli
+    \item \textbf{Note}: Prévu pour le profil radial de dose
+\end{itemize}
+
+\subsubsection{H1[9] -- hElectronSpectrum}
+\begin{itemize}
+    \item \textbf{Variable}: Énergie cinétique de l'électron (keV)
+    \item \textbf{Condition}: Électron secondaire (\texttt{parentID != 0}) dans \texttt{WaterRing\_*}
+    \item \textbf{Fichier source}: \texttt{SteppingAction.cc}, ligne $\sim$176
+    \item \textbf{Fonction}: \texttt{FillElectronSpectrum(energy/keV)}
+\end{itemize}
+
+\subsubsection{H1[10--14] -- h\_dose\_ring0..4}
+\begin{itemize}
+    \item \textbf{Variable}: Dose par événement (nGy)
+    \item \textbf{Condition}: Fin d'événement si \texttt{edep > 0} dans l'anneau
+    \item \textbf{Fichier source}: \texttt{RunAction.cc}, ligne $\sim$505
+    \item \textbf{Formule}: $D_i = E_i \times 0.160218 / m_i$
+\end{itemize}
+
+\subsubsection{H1[15] -- h\_dose\_total}
+\begin{itemize}
+    \item \textbf{Variable}: Dose totale par événement (nGy)
+    \item \textbf{Condition}: Fin d'événement
+    \item \textbf{Fichier source}: \texttt{RunAction.cc}, ligne $\sim$520
+    \item \textbf{Formule}: $D_{tot} = \sum_{i=0}^{4} D_i$
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Histogrammes 2D}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{table}[h]
+\centering
+\begin{tabular}{cllcc}
+\toprule
+\rowcolor{headerblue!20}
+\textbf{Index} & \textbf{Nom} & \textbf{Description} & \textbf{Range} & \textbf{Bins} \\
+\midrule
+H2[0] & hEdepXY & Carte XY des dépôts & $[-30,30] \times [-30,30]$ mm & $100 \times 100$ \\
+\rowcolor{lightgray}
+H2[1] & hEdepRZ & Carte RZ des dépôts & $[0,30] \times [98,108]$ mm & $50 \times 50$ \\
+\bottomrule
+\end{tabular}
+\caption{Liste des histogrammes 2D}
+\end{table}
+
+\subsection{Conditions de remplissage}
+
+\subsubsection{H2[0] -- hEdepXY}
+\begin{itemize}
+    \item \textbf{Variables}: Position X (mm), Position Y (mm)
+    \item \textbf{Poids}: Dépôt d'énergie \texttt{edep} (keV)
+    \item \textbf{Condition}: \texttt{edep > 0} dans \texttt{WaterRing\_*}
+    \item \textbf{Fonction}: \texttt{FillEdepXY(x/mm, y/mm, edep/keV)}
+\end{itemize}
+
+\subsubsection{H2[1] -- hEdepRZ}
+\begin{itemize}
+    \item \textbf{Variables}: Rayon $r = \sqrt{x^2+y^2}$ (mm), Position Z (mm)
+    \item \textbf{Poids}: Dépôt d'énergie \texttt{edep} (keV)
+    \item \textbf{Condition}: \texttt{edep > 0} dans \texttt{WaterRing\_*}
+    \item \textbf{Fonction}: \texttt{FillEdepRZ(r/mm, z/mm, edep/keV)}
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Ntuples}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Ntuple 0 -- EventData}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{clll}
+\toprule
+\rowcolor{headerblue!20}
+\textbf{Col.} & \textbf{Nom} & \textbf{Type} & \textbf{Description} \\
+\midrule
+0 & EventID & Int & Numéro de l'événement \\
+\rowcolor{lightgray}
+1 & EdepTotal & Double & Énergie totale déposée (keV) \\
+2 & EdepRing0 & Double & Énergie déposée anneau 0 (keV) \\
+\rowcolor{lightgray}
+3 & EdepRing1 & Double & Énergie déposée anneau 1 (keV) \\
+4 & EdepRing2 & Double & Énergie déposée anneau 2 (keV) \\
+\rowcolor{lightgray}
+5 & EdepRing3 & Double & Énergie déposée anneau 3 (keV) \\
+6 & EdepRing4 & Double & Énergie déposée anneau 4 (keV) \\
+\rowcolor{lightgray}
+7 & NGammaEmitted & Int & Nombre de gammas primaires émis \\
+8 & NGammaWater & Int & Nombre de gammas entrés dans l'eau \\
+\bottomrule
+\end{tabular}
+\caption{Structure du ntuple EventData}
+\end{table}
+
+\textbf{Fréquence}: 1 entrée par événement (100\,000 entrées)\\
+\textbf{Remplissage}: \texttt{EndOfEventAction()} $\rightarrow$ \texttt{FillEventDataNtuple()}
+
+%------------------------------------------------------------------------------
+\subsection{Ntuple 1 -- StepData}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{clll}
+\toprule
+\rowcolor{headerblue!20}
+\textbf{Col.} & \textbf{Nom} & \textbf{Type} & \textbf{Description} \\
+\midrule
+0 & EventID & Int & Numéro de l'événement \\
+\rowcolor{lightgray}
+1 & X & Double & Position X (mm) \\
+2 & Y & Double & Position Y (mm) \\
+\rowcolor{lightgray}
+3 & Z & Double & Position Z (mm) \\
+4 & Edep & Double & Dépôt d'énergie (keV) \\
+\rowcolor{lightgray}
+5 & RingID & Int & Index de l'anneau (0--4) \\
+6 & ParticleName & String & Nom de la particule \\
+\rowcolor{lightgray}
+7 & ProcessName & String & Nom du processus physique \\
+\bottomrule
+\end{tabular}
+\caption{Structure du ntuple StepData}
+\end{table}
+
+\textbf{Fréquence}: $N$ entrées par événement (selon les dépôts)\\
+\textbf{Condition}: \texttt{edep > 0} dans un volume \texttt{WaterRing\_*}\\
+\textbf{Remplissage}: \texttt{SteppingAction::UserSteppingAction()} $\rightarrow$ \texttt{FillStepNtuple()}
+
+%------------------------------------------------------------------------------
+\subsection{Ntuple 2 -- GammaData}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{clll}
+\toprule
+\rowcolor{headerblue!20}
+\textbf{Col.} & \textbf{Nom} & \textbf{Type} & \textbf{Description} \\
+\midrule
+0 & EventID & Int & Numéro de l'événement \\
+\rowcolor{lightgray}
+1 & Energy & Double & Énergie initiale (keV) \\
+2 & LineID & Int & Index de la raie (0--11, -1 si inconnu) \\
+\rowcolor{lightgray}
+3 & ReachedWater & Int & 1 si entré dans l'eau, 0 sinon \\
+4 & Absorbed & Int & 1 si absorbé dans l'eau, 0 sinon \\
+\bottomrule
+\end{tabular}
+\caption{Structure du ntuple GammaData}
+\end{table}
+
+\textbf{Fréquence}: 1 entrée par gamma primaire ($\sim$75\,000 entrées)\\
+\textbf{Remplissage}: \texttt{EndOfEventAction()} $\rightarrow$ \texttt{FillGammaDataNtuple()}\\
+\textbf{Note}: \texttt{ReachedWater=1} inclut Water1 ET WaterRings (après correction)
+
+%------------------------------------------------------------------------------
+\subsection{Ntuple 3 -- gamma\_lines}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{clll}
+\toprule
+\rowcolor{headerblue!20}
+\textbf{Col.} & \textbf{Nom} & \textbf{Type} & \textbf{Description} \\
+\midrule
+0 & lineIndex & Int & Index de la raie (0--11) \\
+\rowcolor{lightgray}
+1 & energy\_keV & Double & Énergie de la raie (keV) \\
+2 & emitted & Int & Nombre de gammas émis \\
+\rowcolor{lightgray}
+3 & enteredWater & Int & Nombre entrés dans l'eau \\
+4 & absorbedWater & Int & Nombre absorbés dans l'eau \\
+\rowcolor{lightgray}
+5 & waterAbsRate & Double & Taux d'absorption (\%) \\
+6 & waterEntryRate & Double & Taux d'entrée (\%) \\
+\bottomrule
+\end{tabular}
+\caption{Structure du ntuple gamma\_lines}
+\end{table}
+
+\textbf{Fréquence}: 12 entrées (1 par raie Am-241)\\
+\textbf{Remplissage}: \texttt{EndOfRunAction()} -- statistiques agrégées
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{clcr}
+\toprule
+\rowcolor{headerblue!20}
+\textbf{Index} & \textbf{Nom raie} & \textbf{Énergie (keV)} & \textbf{Intensité (\%)} \\
+\midrule
+0 & X$_\text{Ll}$ (Np) & 11.89 & 1.0 \\
+1 & X$_\text{L}\alpha$ (Np) & 13.9 & 13.0 \\
+2 & X$_\text{L}\beta$ (Np) & 17.0 & 18.5 \\
+3 & X$_\text{L}\gamma$ (Np) & 20.8 & 5.16 \\
+4 & $\gamma$ 2,1 & 26.3446 & 2.31 \\
+5 & $\gamma$ 1,0 & 33.1963 & 0.12 \\
+6 & $\gamma$ 4,2 & 43.420 & 0.07 \\
+7 & $\gamma$ 6,4 & 55.56 & 0.02 \\
+\rowcolor{yellow!30}
+\textbf{8} & $\gamma$ \textbf{2,0 (principale)} & \textbf{59.5409} & \textbf{35.92} \\
+9 & $\gamma$ 6,2 & 98.97 & 0.02 \\
+10 & $\gamma$ 4,0 & 102.98 & 0.02 \\
+11 & $\gamma$ 6,1 & 125.30 & 0.004 \\
+\bottomrule
+\end{tabular}
+\caption{Raies X/$\gamma$ de l'Am-241 implémentées}
+\end{table}
+
+%------------------------------------------------------------------------------
+\subsection{Ntuple 4 -- precontainer}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{clll}
+\toprule
+\rowcolor{headerblue!20}
+\textbf{Col.} & \textbf{Nom} & \textbf{Type} & \textbf{Description} \\
+\midrule
+0 & eventID & Int & Numéro de l'événement \\
+\rowcolor{lightgray}
+1 & nPhotons & Int & Nombre de photons primaires ($p_z > 0$) \\
+2 & sumEPhotons\_keV & Double & Énergie totale photons (keV) \\
+\rowcolor{lightgray}
+3 & nElectrons & Int & Nombre d'électrons ($p_z > 0$) \\
+4 & sumEElectrons\_keV & Double & Énergie totale électrons (keV) \\
+\bottomrule
+\end{tabular}
+\caption{Structure du ntuple precontainer}
+\end{table}
+
+\textbf{Fréquence}: 1 entrée par événement\\
+\textbf{Plan}: \texttt{PreContainerPlane} -- AIR, $z = 99$--$100$ mm\\
+\textbf{Condition}: Particule entrant dans le plan avec $p_z > 0$\\
+\textbf{Filtre photons}: \texttt{parentID == 0} (primaires seulement)
+
+%------------------------------------------------------------------------------
+\subsection{Ntuple 5 -- postcontainer}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{clll}
+\toprule
+\rowcolor{headerblue!20}
+\textbf{Col.} & \textbf{Nom} & \textbf{Type} & \textbf{Description} \\
+\midrule
+0 & eventID & Int & Numéro de l'événement \\
+\rowcolor{lightgray}
+1 & nPhotons\_fwd & Int & Photons transmis ($p_z > 0$) \\
+2 & sumEPhotons\_fwd\_keV & Double & Énergie photons transmis (keV) \\
+\rowcolor{lightgray}
+3 & nPhotons\_back & Int & Photons rétrodiffusés ($p_z < 0$) \\
+4 & sumEPhotons\_back\_keV & Double & Énergie photons rétrodiff. (keV) \\
+\rowcolor{lightgray}
+5 & nElectrons\_fwd & Int & Électrons transmis ($p_z > 0$) \\
+6 & sumEElectrons\_fwd\_keV & Double & Énergie électrons transmis (keV) \\
+\rowcolor{lightgray}
+7 & nElectrons\_back & Int & Électrons rétrodiffusés ($p_z < 0$) \\
+8 & sumEElectrons\_back\_keV & Double & Énergie électrons rétrodiff. (keV) \\
+\bottomrule
+\end{tabular}
+\caption{Structure du ntuple postcontainer}
+\end{table}
+
+\textbf{Fréquence}: 1 entrée par événement\\
+\textbf{Plan}: \texttt{PostContainerPlane} -- POLYSTYRÈNE, $z = 103$--$104$ mm\\
+\textbf{Filtre photons}: TOUS (primaires + Compton diffusés)
+
+%------------------------------------------------------------------------------
+\subsection{Ntuple 6 -- doses}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{clll}
+\toprule
+\rowcolor{headerblue!20}
+\textbf{Col.} & \textbf{Nom} & \textbf{Type} & \textbf{Description} \\
+\midrule
+0 & eventID & Int & Numéro de l'événement \\
+\rowcolor{lightgray}
+1 & dose\_nGy\_ring0 & Double & Dose anneau 0 (nGy) \\
+2 & dose\_nGy\_ring1 & Double & Dose anneau 1 (nGy) \\
+\rowcolor{lightgray}
+3 & dose\_nGy\_ring2 & Double & Dose anneau 2 (nGy) \\
+4 & dose\_nGy\_ring3 & Double & Dose anneau 3 (nGy) \\
+\rowcolor{lightgray}
+5 & dose\_nGy\_ring4 & Double & Dose anneau 4 (nGy) \\
+6 & dose\_nGy\_total & Double & Dose totale (nGy) \\
+\rowcolor{lightgray}
+7 & edep\_keV\_total & Double & Énergie totale déposée (keV) \\
+8 & nPrimaries & Int & Nombre de gammas primaires \\
+\rowcolor{lightgray}
+9 & nTransmitted & Int & Nombre de gammas transmis \\
+10 & nAbsorbed & Int & Nombre de gammas absorbés \\
+\bottomrule
+\end{tabular}
+\caption{Structure du ntuple doses}
+\end{table}
+
+\textbf{Fréquence}: 1 entrée par événement\\
+\textbf{Remplissage}: \texttt{EndOfEventAction()} $\rightarrow$ \texttt{FillDosesNtuple()}\\
+\textbf{Formule dose}: $D_i \text{ (nGy)} = E_i \text{ (MeV)} \times 0.160218 / m_i \text{ (g)}$
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Schéma de remplissage}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+\rowcolor{headerblue!20}
+\textbf{Moment} & \textbf{Fonction} & \textbf{Objets remplis} \\
+\midrule
+\multirow{4}{*}{Chaque step} & \multirow{4}{*}{\texttt{UserSteppingAction()}} & H1[0--9], H2[0--1] \\
+ & & Ntuple 1 (StepData) \\
+ & & Compteurs Pre/PostContainer \\
+ & & Compteurs par raie \\
+\midrule
+\rowcolor{lightgray}
+\multirow{4}{*}{Fin événement} & \multirow{4}{*}{\texttt{EndOfEventAction()}} & H1[10--15] \\
+\rowcolor{lightgray}
+ & & Ntuple 0 (EventData) \\
+\rowcolor{lightgray}
+ & & Ntuple 2 (GammaData) \\
+\rowcolor{lightgray}
+ & & Ntuples 4, 5, 6 \\
+\midrule
+Fin run & \texttt{EndOfRunAction()} & Ntuple 3 (gamma\_lines) \\
+\bottomrule
+\end{tabular}
+\caption{Moments de remplissage des différents objets}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Géométrie de référence}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{verbatim}
+Source Am-241 (z = 73.5 mm)
+        │
+        ▼ gammas (+z)
+┌───────────────────────────────┐
+│  PreContainerPlane            │  z = 99-100 mm   │ AIR
+├───────────────────────────────┤
+│  Water1 (uniforme)            │  z = 100-102 mm  │ EAU (2 mm)
+├───────────────────────────────┤
+│  WaterRing_0..4 (anneaux)     │  z = 102-103 mm  │ EAU (1 mm)
+├───────────────────────────────┤
+│  PostContainerPlane           │  z = 103-104 mm  │ POLYSTYRÈNE
+├───────────────────────────────┤
+│  TungstenFoil                 │  z = 104-104.05  │ W (50 µm)
+└───────────────────────────────┘
+\end{verbatim}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ccccc}
+\toprule
+\rowcolor{headerblue!20}
+\textbf{Anneau} & \textbf{$r_{int}$ (mm)} & \textbf{$r_{ext}$ (mm)} & \textbf{Volume (cm³)} & \textbf{Masse (g)} \\
+\midrule
+0 & 0 & 5 & 0.0785 & 0.0785 \\
+\rowcolor{lightgray}
+1 & 5 & 10 & 0.2356 & 0.2356 \\
+2 & 10 & 15 & 0.3927 & 0.3927 \\
+\rowcolor{lightgray}
+3 & 15 & 20 & 0.5498 & 0.5498 \\
+4 & 20 & 25 & 0.7069 & 0.7069 \\
+\midrule
+\textbf{Total} & 0 & 25 & 1.9635 & 1.9635 \\
+\bottomrule
+\end{tabular}
+\caption{Dimensions des anneaux d'eau (épaisseur = 1 mm)}
+\end{table}
+
+\end{document}

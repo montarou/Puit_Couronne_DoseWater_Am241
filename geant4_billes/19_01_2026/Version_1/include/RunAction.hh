@@ -62,20 +62,6 @@ public:
                           const std::array<G4double, DetectorConstruction::kNbWaterRings>& ringDeposits,
                           G4double totalDeposit,
                           G4int nPrimaries, G4int nTransmitted, G4int nAbsorbed);
-    
-    // Ntuple 0: EventData - Données par événement
-    void FillEventDataNtuple(G4int eventID,
-                              G4double edepTotal_keV,
-                              const std::array<G4double, DetectorConstruction::kNbWaterRings>& ringEdep_keV,
-                              G4int nGammaEmitted,
-                              G4int nGammaWater);
-    
-    // Ntuple 2: GammaData - Données par gamma primaire
-    void FillGammaDataNtuple(G4int eventID,
-                              G4double energy_keV,
-                              G4int lineID,
-                              G4bool reachedWater,
-                              G4bool absorbed);
 
     // ═══════════════════════════════════════════════════════════════
     // CONVERSION D'UNITÉS

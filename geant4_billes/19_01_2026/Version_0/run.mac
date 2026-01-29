@@ -59,7 +59,7 @@
 #/run/beamOn 100000
 
 # Haute statistique (12.5 min d'irradiation)
-# /run/beamOn 25000000
+ /run/beamOn 25000000
 
 # Très haute statistique (2.1 h d'irradiation)
- /run/beamOn 100000
+# /run/beamOn 100000

@@ -1,0 +1,488 @@
+\documentclass[11pt,a4paper]{article}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+% PACKAGES
+% ═══════════════════════════════════════════════════════════════════════════════
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{siunitx}
+\usepackage{physics}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{pifont}
+
+% Configuration
+\geometry{margin=2.5cm}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, patterns, decorations.pathmorphing, calc, backgrounds}
+
+% Couleurs personnalisées
+\definecolor{colEmis}{HTML}{3498DB}
+\definecolor{colEntres}{HTML}{2ECC71}
+\definecolor{colAbsorbes}{HTML}{E74C3C}
+\definecolor{colCompton}{HTML}{E67E22}
+\definecolor{colTheo}{HTML}{F39C12}
+\definecolor{colEau}{HTML}{85C1E9}
+\definecolor{colAir}{HTML}{F9E79F}
+
+% En-tête
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Simulation Am-241 -- Geant4}
+\lhead{Problème de pollution Compton}
+\rfoot{Page \thepage}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\begin{document}
+
+\begin{center}
+    {\LARGE\bfseries Explication du problème de pollution Compton}\\[0.3cm]
+    {\large dans les spectres d'absorption Am-241}\\[0.5cm]
+    {\normalsize Simulation Geant4 -- Analyse des résultats}
+\end{center}
+
+\vspace{0.5cm}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Contexte et observation du problème}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+Dans la simulation Geant4 de l'irradiation par une source Am-241, on observe une anomalie dans le spectre des gammas entrant dans l'eau : certaines raies (notamment 43.4 et 55.6~keV) semblent absentes ou très atténuées, alors que des counts supplémentaires apparaissent dans des bins adjacents.
+
+\begin{tcolorbox}[colback=red!5!white, colframe=red!75!black, title=\textbf{Observation problématique}]
+\begin{itemize}
+    \item Bin 54-56~keV : 21 gammas émis $\rightarrow$ \textbf{146 gammas entrés} (+125 !)
+    \item Bin 56-58~keV : 0 gamma émis $\rightarrow$ \textbf{200 gammas entrés} (+200 !)
+    \item Bin 58-60~keV : 35\,794 gammas émis $\rightarrow$ 29\,182 gammas entrés (-6\,612)
+\end{itemize}
+\end{tcolorbox}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Géométrie de la simulation}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[scale=1.0, >=Stealth]
+    
+    % Fond
+    \fill[colAir!30] (-1, -0.5) rectangle (6, 4);
+    \fill[colEau!50] (6, -0.5) rectangle (9.5, 4);
+    
+    % Source Am-241
+    \node[circle, fill=yellow!80!orange, minimum size=1cm, draw=orange!80!black, thick] 
+        (source) at (0, 1.75) {\small Am-241};
+    
+    % Étiquettes des zones
+    \node[above] at (2.5, 4) {\textbf{Air (25 mm)}};
+    \node[above] at (7.75, 4) {\textbf{Eau (3 mm)}};
+    
+    % Lignes de séparation
+    \draw[very thick, dashed] (6, -0.5) -- (6, 4);
+    
+    % Dimensions
+    \draw[<->, thick] (0, -0.3) -- (6, -0.3) node[midway, below] {25 mm};
+    \draw[<->, thick] (6, -0.3) -- (9, -0.3) node[midway, below] {3 mm};
+    
+    % Gamma direct (59.5 keV)
+    \draw[->, colEmis, very thick] (0.5, 2.5) -- (8.5, 2.5);
+    \node[colEmis, right] at (8.6, 2.5) {\small 59.5 keV};
+    \fill[colEmis] (0.5, 2.5) circle (3pt);
+    
+    % Gamma diffusé Compton
+    \draw[->, colEmis, thick] (0.5, 1.5) -- (3.5, 1.5);
+    \fill[colEmis] (0.5, 1.5) circle (3pt);
+    
+    % Point de diffusion Compton
+    \fill[colCompton] (3.5, 1.5) circle (5pt);
+    \node[colCompton, above right] at (3.5, 1.7) {\small Compton};
+    
+    % Gamma après diffusion
+    \draw[->, colCompton, very thick, dashed] (3.5, 1.5) -- (8.5, 0.8);
+    \node[colCompton, right] at (8.6, 0.8) {\small 55 keV};
+    
+    % Électron Compton
+    \draw[->, gray, thick] (3.5, 1.5) -- (4.5, 2.8);
+    \node[gray, above] at (4.5, 2.8) {\small $e^-$};
+    
+    % Angle de diffusion
+    \draw[thick] (4.2, 1.5) arc (0:-25:0.7);
+    \node at (4.8, 1.2) {\small $\theta$};
+    
+    % Légende
+    \node[anchor=north west] at (-0.8, 0) {
+        \begin{tabular}{cl}
+            \tikz\draw[->, colEmis, very thick] (0,0) -- (0.5,0); & Gamma direct \\
+            \tikz\draw[->, colCompton, very thick, dashed] (0,0) -- (0.5,0); & Gamma diffusé \\
+        \end{tabular}
+    };
+    
+\end{tikzpicture}
+\caption{Géométrie de la simulation : les gammas traversent 25~mm d'air avant d'atteindre l'eau. Certains subissent une diffusion Compton dans l'air et arrivent avec une énergie réduite.}
+\label{fig:geometrie}
+\end{figure}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Physique de la diffusion Compton}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+La diffusion Compton est l'interaction d'un photon avec un électron quasi-libre. Le photon est dévié d'un angle $\theta$ et perd une partie de son énergie.
+
+\subsection{Formule de l'énergie après diffusion}
+
+L'énergie du photon après diffusion Compton est donnée par :
+
+\begin{equation}
+\boxed{E' = \frac{E_0}{1 + \dfrac{E_0}{m_e c^2}(1 - \cos\theta)}}
+\label{eq:compton}
+\end{equation}
+
+où :
+\begin{itemize}
+    \item $E_0$ = énergie initiale du photon (59.5~keV pour la raie principale Am-241)
+    \item $E'$ = énergie après diffusion
+    \item $m_e c^2$ = 511~keV (masse de l'électron)
+    \item $\theta$ = angle de diffusion
+\end{itemize}
+
+\subsection{Application numérique pour la raie 59.5~keV}
+
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=12cm, height=7cm,
+    xlabel={Angle de diffusion $\theta$ (°)},
+    ylabel={Énergie après Compton (keV)},
+    xmin=0, xmax=180,
+    ymin=40, ymax=62,
+    grid=both,
+    grid style={gray!30},
+    legend pos=south west,
+    legend style={fill=white, fill opacity=0.8},
+]
+
+% Courbe Compton
+\addplot[colEmis, very thick, domain=0:180, samples=100] 
+    {59.5 / (1 + (59.5/511)*(1 - cos(x)))};
+\addlegendentry{$E'(\theta)$ pour $E_0 = 59.5$~keV}
+
+% Lignes horizontales pour les raies
+\addplot[colEntres, thick, dashed] coordinates {(0, 59.5) (180, 59.5)};
+\addlegendentry{Raie 59.5~keV}
+
+\addplot[colCompton, thick, dashed] coordinates {(0, 55.6) (180, 55.6)};
+\addlegendentry{Raie 55.6~keV}
+
+\addplot[colAbsorbes, thick, dashed] coordinates {(0, 43.4) (180, 43.4)};
+\addlegendentry{Raie 43.4~keV}
+
+% Zone de pollution (48-58 keV)
+\addplot[colCompton, fill opacity=0.2] fill between[of=A and B] 
+    coordinates {(0,48) (180,48) (180,58) (0,58)};
+
+% Points remarquables
+\addplot[only marks, mark=*, mark size=3pt, black] 
+    coordinates {(45, 57.5) (60, 56.2) (90, 53.3) (120, 50.7)};
+
+% Annotations
+\node[anchor=west] at (axis cs:47, 57.5) {\small $\theta=45°$};
+\node[anchor=west] at (axis cs:62, 56.2) {\small $\theta=60°$};
+\node[anchor=west] at (axis cs:92, 53.3) {\small $\theta=90°$};
+\node[anchor=west] at (axis cs:122, 50.7) {\small $\theta=120°$};
+
+% Zone pollution label
+\node[colCompton, fill=white, fill opacity=0.8] at (axis cs:140, 53) {\small Zone pollution};
+
+\end{axis}
+\end{tikzpicture}
+\caption{Énergie d'un gamma de 59.5~keV après diffusion Compton en fonction de l'angle $\theta$. La zone orangée (48-58~keV) correspond aux bins qui seront "pollués" par les gammas diffusés.}
+\label{fig:compton_curve}
+\end{figure}
+
+\begin{table}[h!]
+\centering
+\caption{Énergie après diffusion Compton pour $E_0 = 59.5$~keV}
+\label{tab:compton}
+\begin{tabular}{ccc}
+\toprule
+\textbf{Angle $\theta$} & \textbf{Énergie $E'$} & \textbf{Bin affecté} \\
+\midrule
+0° & 59.5~keV & 58-60~keV (raie 59.5) \\
+30° & 58.6~keV & 58-60~keV \\
+45° & 57.5~keV & 56-58~keV \\
+\rowcolor{colCompton!20} 60° & 56.2~keV & 56-58~keV $\leftarrow$ \textit{pollution} \\
+\rowcolor{colCompton!20} 90° & 53.3~keV & 52-54~keV $\leftarrow$ \textit{pollution} \\
+\rowcolor{colCompton!20} 120° & 50.7~keV & 50-52~keV $\leftarrow$ \textit{pollution} \\
+180° & 48.3~keV & 48-50~keV \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Illustration du problème}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[scale=0.9]
+
+% ─────────────────────────────────────────────────────────────────────────────
+% Panel gauche : Spectre ÉMIS
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{scope}[shift={(0,0)}]
+    \draw[->] (0,0) -- (7,0) node[right] {E (keV)};
+    \draw[->] (0,0) -- (0,5) node[above] {Counts};
+    
+    % Titre
+    \node[anchor=south, font=\bfseries] at (3.5, 5.2) {Spectre ÉMIS};
+    
+    % Axe X
+    \foreach \x/\label in {1/44, 2/48, 3/52, 4/56, 5/60, 6/64} {
+        \draw (\x, 0) -- (\x, -0.1) node[below, font=\small] {\label};
+    }
+    
+    % Barres du spectre émis
+    \fill[colEmis, opacity=0.8] (0.7, 0) rectangle (1.3, 0.3);  % 43.4 keV (faible)
+    \fill[colEmis, opacity=0.8] (3.7, 0) rectangle (4.3, 0.1);  % 55.6 keV (très faible)
+    \fill[colEmis, opacity=0.8] (4.7, 0) rectangle (5.3, 4.5);  % 59.5 keV (dominant)
+    
+    % Annotations
+    \node[colEmis, font=\small] at (1, 0.6) {43.4};
+    \node[colEmis, font=\small] at (4, 0.4) {55.6};
+    \node[colEmis, font=\small] at (5, 4.8) {59.5};
+    
+    % Légende
+    \node[anchor=north west, font=\small] at (0.2, 4.8) {Raies Am-241};
+\end{scope}
+
+% Flèche
+\draw[->, very thick, gray] (7.5, 2.5) -- (9, 2.5) node[midway, above] {\small Air 25mm};
+
+% ─────────────────────────────────────────────────────────────────────────────
+% Panel droit : Spectre ENTRÉ (pollué)
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{scope}[shift={(9.5,0)}]
+    \draw[->] (0,0) -- (7,0) node[right] {E (keV)};
+    \draw[->] (0,0) -- (0,5) node[above] {Counts};
+    
+    % Titre
+    \node[anchor=south, font=\bfseries, colAbsorbes] at (3.5, 5.2) {Spectre ENTRÉ (pollué)};
+    
+    % Axe X
+    \foreach \x/\label in {1/44, 2/48, 3/52, 4/56, 5/60, 6/64} {
+        \draw (\x, 0) -- (\x, -0.1) node[below, font=\small] {\label};
+    }
+    
+    % Zone de pollution Compton
+    \fill[colCompton, opacity=0.2] (1.5, 0) rectangle (4.5, 3);
+    \node[colCompton, font=\small\itshape] at (3, 2.5) {Pollution};
+    \node[colCompton, font=\small\itshape] at (3, 2.0) {Compton};
+    
+    % Barres du spectre entré
+    \fill[colAbsorbes, opacity=0.8] (0.7, 0) rectangle (1.3, 0.25);  % 43.4 keV
+    \fill[colCompton, opacity=0.8] (1.7, 0) rectangle (2.3, 0.4);   % 48-50 keV (Compton)
+    \fill[colCompton, opacity=0.8] (2.7, 0) rectangle (3.3, 0.9);   % 52-54 keV (Compton)
+    \fill[colCompton, opacity=0.8] (3.7, 0) rectangle (4.3, 1.5);   % 56-58 keV (Compton + 55.6)
+    \fill[colAbsorbes, opacity=0.8] (4.7, 0) rectangle (5.3, 3.8);  % 59.5 keV (réduit)
+    
+    % Annotations
+    \draw[->, thick, colCompton] (3, 3.3) -- (2.5, 1.2);
+    \draw[->, thick, colCompton] (3, 3.3) -- (3.5, 1.7);
+    \node[colCompton, font=\small, above] at (3, 3.3) {Gammas 59.5 keV};
+    \node[colCompton, font=\small, above] at (3, 3.0) {diffusés};
+    
+    % Différence
+    \draw[<->, thick, red] (5.5, 4.5) -- (5.5, 3.8);
+    \node[red, font=\small, right] at (5.5, 4.15) {-15\%};
+\end{scope}
+
+\end{tikzpicture}
+\caption{Comparaison schématique des spectres émis et entré dans l'eau. Les gammas de 59.5~keV qui diffusent Compton dans l'air arrivent avec une énergie réduite et "polluent" les bins 48-58~keV.}
+\label{fig:pollution}
+\end{figure}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Conséquence sur l'analyse}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\subsection{Le problème : identification par énergie mesurée}
+
+Lorsqu'on construit un histogramme en utilisant l'énergie du gamma \textbf{au moment où il entre dans l'eau}, on commet une erreur d'identification :
+
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[
+    box/.style={rectangle, draw, thick, minimum width=3cm, minimum height=1cm, align=center},
+    arrow/.style={->, thick, >=Stealth}
+]
+
+% Gamma émis à 59.5 keV
+\node[box, fill=colEmis!20] (emis) at (0, 0) {Gamma émis\\$E_0 = 59.5$~keV};
+
+% Diffusion Compton
+\node[circle, fill=colCompton!50, minimum size=1.5cm] (compton) at (4, 0) {Compton\\$\theta=60°$};
+
+% Gamma avec énergie réduite
+\node[box, fill=colCompton!20] (diffuse) at (8, 0) {Gamma diffusé\\$E' = 56$~keV};
+
+% Entrée dans l'eau
+\node[box, fill=colEau!50] (eau) at (12, 0) {Entre dans l'eau\\mesure : 56~keV};
+
+% Flèches
+\draw[arrow] (emis) -- (compton);
+\draw[arrow] (compton) -- (diffuse);
+\draw[arrow] (diffuse) -- (eau);
+
+% Deux méthodes d'identification
+\node[box, fill=red!20, text width=4cm] (methode1) at (6, -3) 
+    {\textbf{Histogramme en E}\\Compté dans bin\\54-56~keV\\$\rightarrow$ \textcolor{red}{FAUX !}};
+
+\node[box, fill=green!20, text width=4cm] (methode2) at (12, -3) 
+    {\textbf{Statistiques par raie}\\Identifié comme\\raie 59.5~keV\\$\rightarrow$ \textcolor{green!50!black}{CORRECT}};
+
+% Flèches vers méthodes
+\draw[arrow, red, dashed] (eau.south) -- (methode1.north);
+\draw[arrow, green!50!black] (eau.south) -- (methode2.north);
+
+% Labels
+\node[font=\small\itshape, gray] at (2, 0.8) {dans l'air};
+
+\end{tikzpicture}
+\caption{Un gamma émis à 59.5~keV mais diffusé Compton est mal identifié si on utilise son énergie mesurée. La méthode correcte utilise l'énergie \textbf{initiale} (LineID dans gamma\_lines).}
+\label{fig:methodes}
+\end{figure}
+
+\subsection{La solution : identification par énergie initiale}
+
+Le TTree \texttt{gamma\_lines} dans le fichier ROOT identifie chaque gamma par son énergie \textbf{initiale} (au moment de l'émission), pas son énergie au moment de l'entrée dans l'eau.
+
+\begin{tcolorbox}[colback=green!5!white, colframe=green!75!black, title=\textbf{Solution recommandée}]
+\textbf{Utiliser les statistiques par raie} (TTree \texttt{gamma\_lines}) :
+\begin{itemize}
+    \item Chaque gamma est identifié par son \texttt{LineID} (0-11)
+    \item L'identification se fait par l'énergie \textbf{initiale}
+    \item Même si le gamma diffuse Compton, il reste identifié correctement
+    \item $\Rightarrow$ Pas de pollution entre les raies !
+\end{itemize}
+\end{tcolorbox}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Comparaison des deux méthodes de visualisation}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[scale=0.85]
+
+% ─────────────────────────────────────────────────────────────────────────────
+% Méthode INCORRECTE : Histogramme en énergie
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{scope}[shift={(0,0)}]
+    \node[anchor=south, font=\large\bfseries, red!70!black] at (3.5, 5.5) 
+        {$\times$ INCORRECT : Histogramme en énergie};
+    
+    \draw[->] (0,0) -- (7.5,0) node[right] {E (keV)};
+    \draw[->] (0,0) -- (0,5) node[above] {Counts};
+    
+    % Axe X
+    \foreach \x/\label in {0.5/10, 1.5/20, 2.5/30, 3.5/40, 4.5/50, 5.5/60, 6.5/100} {
+        \draw (\x, 0) -- (\x, -0.1) node[below, font=\tiny] {\label};
+    }
+    
+    % Barres (spectre entré - pollué)
+    \fill[colEmis, opacity=0.8] (0.3, 0) rectangle (0.7, 1.5);
+    \fill[colEmis, opacity=0.8] (0.8, 0) rectangle (1.2, 3.5);
+    \fill[colEmis, opacity=0.8] (1.3, 0) rectangle (1.7, 4.2);
+    \fill[colEmis, opacity=0.8] (1.8, 0) rectangle (2.2, 2.0);
+    \fill[colEmis, opacity=0.8] (2.3, 0) rectangle (2.7, 1.2);
+    \fill[colCompton, opacity=0.6] (3.3, 0) rectangle (3.7, 0.3);  % 43 keV + Compton
+    \fill[colCompton, opacity=0.6] (4.0, 0) rectangle (4.4, 0.5);  % Compton
+    \fill[colCompton, opacity=0.6] (4.5, 0) rectangle (4.9, 0.8);  % Compton
+    \fill[colCompton, opacity=0.6] (5.0, 0) rectangle (5.4, 1.2);  % 55.6 + Compton
+    \fill[colEmis, opacity=0.8] (5.5, 0) rectangle (5.9, 4.5);     % 59.5 keV
+    
+    % Zone pollution
+    \draw[colCompton, thick, dashed] (3.2, 0) rectangle (5.5, 1.5);
+    \node[colCompton, font=\small] at (4.3, 1.8) {Pollution Compton};
+    
+    % Problème
+    \node[red, font=\small, align=center] at (4.3, 3.5) {Les raies 43 et 56~keV\\sont noyées !};
+\end{scope}
+
+% ─────────────────────────────────────────────────────────────────────────────
+% Méthode CORRECTE : Barres par raie
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{scope}[shift={(9,0)}]
+    \node[anchor=south, font=\large\bfseries, green!50!black] at (3.5, 5.5) 
+        {$\checkmark$ CORRECT : Barres par raie};
+    
+    \draw[->] (0,0) -- (7.5,0) node[right] {Raie};
+    \draw[->] (0,0) -- (0,5) node[above] {Counts};
+    
+    % Barres par raie (données correctes)
+    \fill[colEntres, opacity=0.8] (0.5, 0) rectangle (1.0, 1.5);
+    \fill[colEntres, opacity=0.8] (1.2, 0) rectangle (1.7, 3.5);
+    \fill[colEntres, opacity=0.8] (1.9, 0) rectangle (2.4, 4.2);
+    \fill[colEntres, opacity=0.8] (2.6, 0) rectangle (3.1, 2.0);
+    \fill[colEntres, opacity=0.8] (3.3, 0) rectangle (3.8, 1.2);
+    \fill[colEntres, opacity=0.8] (4.0, 0) rectangle (4.5, 0.15);  % 33 keV
+    \fill[colEntres, opacity=0.8] (4.7, 0) rectangle (5.2, 0.08);  % 43 keV
+    \fill[colEntres, opacity=0.8] (5.4, 0) rectangle (5.9, 0.03);  % 56 keV
+    \fill[colEntres, opacity=0.8] (6.1, 0) rectangle (6.6, 4.5);   % 59.5 keV
+    
+    % Labels raies
+    \node[font=\tiny, rotate=45, anchor=east] at (0.75, -0.3) {X$_{Ll}$};
+    \node[font=\tiny, rotate=45, anchor=east] at (1.45, -0.3) {X$_{L\alpha}$};
+    \node[font=\tiny, rotate=45, anchor=east] at (2.15, -0.3) {X$_{L\beta}$};
+    \node[font=\tiny, rotate=45, anchor=east] at (2.85, -0.3) {X$_{L\gamma}$};
+    \node[font=\tiny, rotate=45, anchor=east] at (3.55, -0.3) {$\gamma$26};
+    \node[font=\tiny, rotate=45, anchor=east] at (4.25, -0.3) {$\gamma$33};
+    \node[font=\tiny, rotate=45, anchor=east] at (4.95, -0.3) {$\gamma$43};
+    \node[font=\tiny, rotate=45, anchor=east] at (5.65, -0.3) {$\gamma$56};
+    \node[font=\tiny, rotate=45, anchor=east] at (6.35, -0.3) {$\gamma$59};
+    
+    % Avantage
+    \node[green!50!black, font=\small, align=center] at (3.5, 3.5) 
+        {Chaque raie est\\comptée séparément\\$\Rightarrow$ Pas de pollution};
+\end{scope}
+
+\end{tikzpicture}
+\caption{Comparaison des deux méthodes de visualisation. À gauche : l'histogramme en énergie est pollué par les Compton. À droite : les barres par raie (depuis \texttt{gamma\_lines}) donnent les bonnes statistiques.}
+\label{fig:comparaison}
+\end{figure}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Résumé et recommandations}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\begin{tcolorbox}[colback=blue!5!white, colframe=blue!75!black, title=\textbf{Résumé}]
+\begin{enumerate}
+    \item Les gammas de 59.5~keV traversent 25~mm d'air avant d'atteindre l'eau
+    \item Certains subissent une \textbf{diffusion Compton} dans l'air
+    \item Après diffusion : $E' = \frac{59.5}{1 + \frac{59.5}{511}(1-\cos\theta)}$ keV
+    \item Ces gammas arrivent dans l'eau avec une énergie \textbf{réduite} (48-58~keV)
+    \item Sur l'histogramme en énergie, ils "polluent" les bins des raies faibles
+\end{enumerate}
+\end{tcolorbox}
+
+\vspace{0.5cm}
+
+\begin{tcolorbox}[colback=green!5!white, colframe=green!75!black, title=\textbf{Recommandation}]
+Pour l'analyse des taux d'absorption par raie :
+\begin{itemize}
+    \item[\ding{51}] Utiliser le TTree \texttt{gamma\_lines} (statistiques par raie)
+    \item[\ding{51}] Faire des graphiques en \textbf{barres par raie}, pas des histogrammes en énergie
+    \item[\ding{55}] Ne PAS utiliser \texttt{hGammaEnteringWater} pour l'analyse par raie
+\end{itemize}
+\end{tcolorbox}
+
+\end{document}
